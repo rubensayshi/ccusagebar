@@ -4,7 +4,15 @@ struct BlockUsageView: View {
     let block: Block
     let limit: Double
 
+    private let blockTotalMinutes: Double = 300 // 5h window
+
     private var fraction: Double { block.costUSD / limit }
+
+    private var timeFraction: Double {
+        guard let remaining = block.projection?.remainingMinutes else { return 0 }
+        let elapsed = blockTotalMinutes - Double(remaining)
+        return min(max(elapsed / blockTotalMinutes, 0), 1)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -25,12 +33,16 @@ struct BlockUsageView: View {
                 Spacer()
                 Text(Fmt.percentage(fraction))
                     .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(usageColor(for: fraction))
+                    .foregroundStyle(paceColor(usage: fraction, time: timeFraction))
             }
 
-            ProgressBarView(fraction: fraction)
+            ProgressBarView(fraction: fraction, timeFraction: timeFraction)
 
             HStack {
+                Text(paceLabel(usage: fraction, time: timeFraction))
+                    .font(.caption)
+                    .foregroundStyle(paceColor(usage: fraction, time: timeFraction))
+                Spacer()
                 if let rate = block.burnRate {
                     Text("Burn: \(Fmt.burnRate(rate.costPerHour))")
                         .font(.caption)
