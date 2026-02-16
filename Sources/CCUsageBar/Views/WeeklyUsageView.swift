@@ -6,16 +6,9 @@ struct WeeklyUsageView: View {
 
     private var fraction: Double { cost / limit }
 
-    /// Mon 00:00 = 0, Sun 23:59 = ~1
+    /// Fraction of the billing week elapsed (Wed 09:00 UTC to next Wed 09:00 UTC)
     private var timeFraction: Double {
-        let cal = Calendar.current
-        let now = Date()
-        let weekday = cal.component(.weekday, from: now) // 1=Sun..7=Sat
-        let hour = cal.component(.hour, from: now)
-        let minute = cal.component(.minute, from: now)
-        let daysSinceMonday = (weekday + 5) % 7
-        let minutesSinceMonday = Double(daysSinceMonday * 1440 + hour * 60 + minute)
-        return minutesSinceMonday / (7 * 1440)
+        weeklyTimeFraction()
     }
 
     var body: some View {

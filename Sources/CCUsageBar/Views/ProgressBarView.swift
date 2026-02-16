@@ -35,6 +35,21 @@ func paceColor(usage: Double, time: Double) -> Color {
     }
 }
 
+/// Fraction of the Anthropic billing week elapsed (Wed 09:00 UTC → next Wed 09:00 UTC).
+func weeklyTimeFraction(now: Date = Date()) -> Double {
+    var utcCal = Calendar(identifier: .gregorian)
+    utcCal.timeZone = TimeZone(identifier: "UTC")!
+    let weekday = utcCal.component(.weekday, from: now) // 1=Sun..7=Sat, Wed=4
+    let daysSinceWed = (weekday - 4 + 7) % 7
+    let startOfUTCDay = utcCal.startOfDay(for: now)
+    var resetPoint = utcCal.date(byAdding: .day, value: -daysSinceWed, to: startOfUTCDay)!
+    resetPoint = utcCal.date(bySettingHour: 9, minute: 0, second: 0, of: resetPoint)!
+    if resetPoint > now { resetPoint = utcCal.date(byAdding: .day, value: -7, to: resetPoint)! }
+    let elapsed = now.timeIntervalSince(resetPoint)
+    let totalWeek: TimeInterval = 7 * 24 * 3600
+    return min(max(elapsed / totalWeek, 0), 1)
+}
+
 func paceLabel(usage: Double, time: Double) -> String {
     guard time > 0.01 else {
         return usage > 0 ? "Early usage" : "No usage yet"

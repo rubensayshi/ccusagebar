@@ -27,17 +27,9 @@ struct MenuBarIcon: View {
         return min(max(elapsed / blockTotalMinutes, 0), 1)
     }
 
-    /// How far through the week (0..1), Mon 00:00 = 0, Sun 23:59 = ~1
+    /// Fraction of billing week elapsed (Wed 09:00 UTC → next Wed 09:00 UTC)
     private var weeklyTimeFraction: Double {
-        let cal = Calendar.current
-        let now = Date()
-        let weekday = cal.component(.weekday, from: now) // 1=Sun..7=Sat
-        let hour = cal.component(.hour, from: now)
-        let minute = cal.component(.minute, from: now)
-        // Convert to Monday-based: Mon=0..Sun=6
-        let daysSinceMonday = (weekday + 5) % 7
-        let minutesSinceMonday = Double(daysSinceMonday * 1440 + hour * 60 + minute)
-        return minutesSinceMonday / (7 * 1440)
+        CCUsageBar.weeklyTimeFraction()
     }
 
     var body: some View {
