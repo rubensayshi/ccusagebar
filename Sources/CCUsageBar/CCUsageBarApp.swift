@@ -4,8 +4,8 @@ import SwiftUI
 struct CCUsageBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var service = UsageService()
-    @AppStorage("blockLimit") private var blockLimit: Double = 43.50
-    @AppStorage("weeklyLimit") private var weeklyLimit: Double = 717
+    @AppStorage("blockLimit") private var blockLimit: Double = CostCalculator.defaultBlockLimit
+    @AppStorage("weeklyLimit") private var weeklyLimit: Double = CostCalculator.defaultWeeklyLimit
     @AppStorage("weeklyResetDay") private var weeklyResetDay: Int = 4
     @AppStorage("weeklyResetHour") private var weeklyResetHour: Int = 9
 

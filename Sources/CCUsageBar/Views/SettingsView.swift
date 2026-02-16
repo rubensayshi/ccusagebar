@@ -3,8 +3,8 @@ import ServiceManagement
 
 struct SettingsView: View {
     @AppStorage("hasCompletedSetup") private var hasCompletedSetup = false
-    @AppStorage("blockLimit") private var blockLimit: Double = 43.50
-    @AppStorage("weeklyLimit") private var weeklyLimit: Double = 717
+    @AppStorage("blockLimit") private var blockLimit: Double = CostCalculator.defaultBlockLimit
+    @AppStorage("weeklyLimit") private var weeklyLimit: Double = CostCalculator.defaultWeeklyLimit
     @AppStorage("refreshInterval") private var refreshInterval: Int = 5
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     @AppStorage("weeklyResetDay") private var weeklyResetDay: Int = 4

@@ -2,6 +2,9 @@ import Foundation
 
 enum CostCalculator {
 
+    static let defaultBlockLimit: Double = 38.00
+    static let defaultWeeklyLimit: Double = 550.00
+
     private struct Pricing {
         let input: Double      // per M tokens
         let output: Double

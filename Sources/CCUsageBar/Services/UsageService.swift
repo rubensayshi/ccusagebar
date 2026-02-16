@@ -6,7 +6,7 @@ import Combine
 class UsageService: ObservableObject {
     @Published var data = UsageData()
 
-    @AppStorage("blockLimit") private var blockLimit: Double = 43.50
+    @AppStorage("blockLimit") private var blockLimit: Double = CostCalculator.defaultBlockLimit
     @AppStorage("refreshInterval") private var refreshIntervalMinutes: Int = 5
     @AppStorage("weeklyResetDay") private var weeklyResetDay: Int = 4   // Wed
     @AppStorage("weeklyResetHour") private var weeklyResetHour: Int = 9 // 09:00 UTC

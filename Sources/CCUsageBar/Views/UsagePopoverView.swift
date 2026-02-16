@@ -2,8 +2,8 @@ import SwiftUI
 
 struct UsagePopoverView: View {
     @ObservedObject var service: UsageService
-    @AppStorage("blockLimit") private var blockLimit: Double = 43.50
-    @AppStorage("weeklyLimit") private var weeklyLimit: Double = 717
+    @AppStorage("blockLimit") private var blockLimit: Double = CostCalculator.defaultBlockLimit
+    @AppStorage("weeklyLimit") private var weeklyLimit: Double = CostCalculator.defaultWeeklyLimit
 
 
     var body: some View {
