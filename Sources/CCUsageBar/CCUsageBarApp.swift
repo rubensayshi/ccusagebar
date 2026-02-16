@@ -20,15 +20,32 @@ struct CCUsageBarApp: App {
             )
         }
         .menuBarExtraStyle(.window)
-
-        Settings {
-            SettingsView()
-        }
     }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NotificationService.shared.requestPermission()
+    }
+}
+
+enum SettingsWindowController {
+    private static var window: NSWindow?
+
+    static func open() {
+        if let window, window.isVisible {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        let hostingController = NSHostingController(rootView: SettingsView())
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "Settings"
+        window.styleMask = [.titled, .closable]
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        self.window = window
     }
 }

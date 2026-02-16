@@ -4,13 +4,17 @@ struct UsagePopoverView: View {
     @ObservedObject var service: UsageService
     @AppStorage("blockLimit") private var blockLimit: Double = 43.50
     @AppStorage("weeklyLimit") private var weeklyLimit: Double = 717
-    @Environment(\.openSettings) private var openSettings
+
 
     var body: some View {
         VStack(spacing: 0) {
             if service.data.isLoading && service.data.lastUpdated == nil {
                 ProgressView("Fetching usage…")
                     .padding(24)
+                settingsButton
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
             } else {
                 content
             }
@@ -81,13 +85,19 @@ struct UsagePopoverView: View {
                     .foregroundStyle(.secondary)
             }
 
-            Button {
-                openSettings()
-            } label: {
-                Image(systemName: "gear")
-                    .font(.caption)
-            }
-            .buttonStyle(.borderless)
+            settingsButton
         }
+    }
+
+    private var settingsButton: some View {
+        Button {
+            DispatchQueue.main.async {
+                SettingsWindowController.open()
+            }
+        } label: {
+            Image(systemName: "gear")
+                .font(.caption)
+        }
+        .buttonStyle(.borderless)
     }
 }
