@@ -30,6 +30,10 @@ struct CCUsageBarApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NotificationService.shared.requestPermission()
+
+        if !UserDefaults.standard.bool(forKey: "hasCompletedSetup") {
+            SettingsWindowController.open()
+        }
     }
 }
 
@@ -51,5 +55,10 @@ enum SettingsWindowController {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         self.window = window
+    }
+
+    static func close() {
+        window?.close()
+        window = nil
     }
 }

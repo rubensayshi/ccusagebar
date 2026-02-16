@@ -2,6 +2,7 @@ import SwiftUI
 import ServiceManagement
 
 struct SettingsView: View {
+    @AppStorage("hasCompletedSetup") private var hasCompletedSetup = false
     @AppStorage("blockLimit") private var blockLimit: Double = 43.50
     @AppStorage("weeklyLimit") private var weeklyLimit: Double = 717
     @AppStorage("refreshInterval") private var refreshInterval: Int = 5
@@ -12,8 +13,24 @@ struct SettingsView: View {
     @AppStorage("notifyAt75") private var notifyAt75 = true
     @AppStorage("notifyAt90") private var notifyAt90 = true
 
+    private var isSetupMode: Bool { !hasCompletedSetup }
+
     var body: some View {
         Form {
+            if isSetupMode {
+                Section {
+                    VStack(spacing: 8) {
+                        Text("Welcome to CCUsageBar")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        Text("Configure your usage limits to get started.")
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                }
+            }
+
             Section("Limits") {
                 HStack {
                     Text("Block limit")
@@ -44,29 +61,42 @@ struct SettingsView: View {
                 }
             }
 
-            Section("Refresh") {
-                Picker("Interval", selection: $refreshInterval) {
-                    ForEach(RefreshInterval.allCases) { interval in
-                        Text(interval.label).tag(interval.rawValue)
+            if !isSetupMode {
+                Section("Refresh") {
+                    Picker("Interval", selection: $refreshInterval) {
+                        ForEach(RefreshInterval.allCases) { interval in
+                            Text(interval.label).tag(interval.rawValue)
+                        }
                     }
+                }
+
+                Section("Notifications") {
+                    Toggle("At 50%", isOn: $notifyAt50)
+                    Toggle("At 75%", isOn: $notifyAt75)
+                    Toggle("At 90%", isOn: $notifyAt90)
+                }
+
+                Section("Advanced") {
+                    Toggle("Launch at login", isOn: $launchAtLogin)
+                        .onChange(of: launchAtLogin) { _, newValue in
+                            setLaunchAtLogin(newValue)
+                        }
                 }
             }
 
-            Section("Notifications") {
-                Toggle("At 50%", isOn: $notifyAt50)
-                Toggle("At 75%", isOn: $notifyAt75)
-                Toggle("At 90%", isOn: $notifyAt90)
-            }
-
-            Section("Advanced") {
-                Toggle("Launch at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, newValue in
-                        setLaunchAtLogin(newValue)
+            if isSetupMode {
+                Section {
+                    Button("Get Started") {
+                        hasCompletedSetup = true
+                        SettingsWindowController.close()
                     }
+                    .buttonStyle(.borderedProminent)
+                    .frame(maxWidth: .infinity)
+                }
             }
         }
         .formStyle(.grouped)
-        .frame(width: 350, height: 500)
+        .frame(width: 350, height: isSetupMode ? 400 : 500)
     }
 
     private func setLaunchAtLogin(_ enabled: Bool) {
