@@ -4,11 +4,13 @@ struct WeeklyUsageView: View {
     let cost: Double
     let limit: Double
 
+    @AppStorage("weeklyResetDay") private var resetDay: Int = 4
+    @AppStorage("weeklyResetHour") private var resetHour: Int = 9
+
     private var fraction: Double { cost / limit }
 
-    /// Fraction of the billing week elapsed (Wed 09:00 UTC to next Wed 09:00 UTC)
     private var timeFraction: Double {
-        weeklyTimeFraction()
+        weeklyTimeFraction(resetDay: resetDay, resetHour: resetHour)
     }
 
     var body: some View {

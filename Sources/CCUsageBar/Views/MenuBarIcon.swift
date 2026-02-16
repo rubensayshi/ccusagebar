@@ -7,6 +7,8 @@ struct MenuBarIcon: View {
     let blockRemainingMinutes: Int?
     let weeklyCost: Double
     let weeklyLimit: Double
+    let weeklyResetDay: Int
+    let weeklyResetHour: Int
 
     private let blockTotalMinutes: Double = 300 // 5h window
 
@@ -27,9 +29,8 @@ struct MenuBarIcon: View {
         return min(max(elapsed / blockTotalMinutes, 0), 1)
     }
 
-    /// Fraction of billing week elapsed (Wed 09:00 UTC → next Wed 09:00 UTC)
     private var weeklyTimeFraction: Double {
-        CCUsageBar.weeklyTimeFraction()
+        CCUsageBar.weeklyTimeFraction(resetDay: weeklyResetDay, resetHour: weeklyResetHour)
     }
 
     var body: some View {

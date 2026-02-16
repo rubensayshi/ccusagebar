@@ -8,6 +8,8 @@ class UsageService: ObservableObject {
 
     @AppStorage("blockLimit") private var blockLimit: Double = 43.50
     @AppStorage("refreshInterval") private var refreshIntervalMinutes: Int = 5
+    @AppStorage("weeklyResetDay") private var weeklyResetDay: Int = 4   // Wed
+    @AppStorage("weeklyResetHour") private var weeklyResetHour: Int = 9 // 09:00 UTC
 
     private var timer: Timer?
     private var lastBlockId: String?
@@ -40,7 +42,7 @@ class UsageService: ObservableObject {
             JSONLReader.scan()
         }.value
 
-        let result = BlockCalculator.compute(entries: entries)
+        let result = BlockCalculator.compute(entries: entries, resetDay: weeklyResetDay, resetHour: weeklyResetHour)
 
         if result.block.isActive && !result.block.isGap {
             if result.block.id != lastBlockId {

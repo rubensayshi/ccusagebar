@@ -6,6 +6,8 @@ struct SettingsView: View {
     @AppStorage("weeklyLimit") private var weeklyLimit: Double = 717
     @AppStorage("refreshInterval") private var refreshInterval: Int = 5
     @AppStorage("launchAtLogin") private var launchAtLogin = false
+    @AppStorage("weeklyResetDay") private var weeklyResetDay: Int = 4
+    @AppStorage("weeklyResetHour") private var weeklyResetHour: Int = 9
     @AppStorage("notifyAt50") private var notifyAt50 = true
     @AppStorage("notifyAt75") private var notifyAt75 = true
     @AppStorage("notifyAt90") private var notifyAt90 = true
@@ -26,6 +28,19 @@ struct SettingsView: View {
                     TextField("$", value: $weeklyLimit, format: .number)
                         .frame(width: 80)
                         .textFieldStyle(.roundedBorder)
+                }
+            }
+
+            Section("Weekly Reset") {
+                Picker("Day", selection: $weeklyResetDay) {
+                    ForEach(ResetDay.allCases) { day in
+                        Text(day.label).tag(day.rawValue)
+                    }
+                }
+                Picker("Hour (UTC)", selection: $weeklyResetHour) {
+                    ForEach(0..<24, id: \.self) { h in
+                        Text(String(format: "%02d:00", h)).tag(h)
+                    }
                 }
             }
 
@@ -51,7 +66,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 350, height: 400)
+        .frame(width: 350, height: 500)
     }
 
     private func setLaunchAtLogin(_ enabled: Bool) {

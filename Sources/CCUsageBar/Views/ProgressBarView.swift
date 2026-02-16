@@ -35,19 +35,25 @@ func paceColor(usage: Double, time: Double) -> Color {
     }
 }
 
-/// Fraction of the Anthropic billing week elapsed (Wed 09:00 UTC → next Wed 09:00 UTC).
-func weeklyTimeFraction(now: Date = Date()) -> Double {
-    var utcCal = Calendar(identifier: .gregorian)
-    utcCal.timeZone = TimeZone(identifier: "UTC")!
-    let weekday = utcCal.component(.weekday, from: now) // 1=Sun..7=Sat, Wed=4
-    let daysSinceWed = (weekday - 4 + 7) % 7
-    let startOfUTCDay = utcCal.startOfDay(for: now)
-    var resetPoint = utcCal.date(byAdding: .day, value: -daysSinceWed, to: startOfUTCDay)!
-    resetPoint = utcCal.date(bySettingHour: 9, minute: 0, second: 0, of: resetPoint)!
-    if resetPoint > now { resetPoint = utcCal.date(byAdding: .day, value: -7, to: resetPoint)! }
+/// Fraction of the billing week elapsed, given a reset day (1=Sun..7=Sat) and hour (UTC).
+func weeklyTimeFraction(resetDay: Int = 4, resetHour: Int = 9, now: Date = Date()) -> Double {
+    let resetPoint = weeklyResetPoint(resetDay: resetDay, resetHour: resetHour, before: now)
     let elapsed = now.timeIntervalSince(resetPoint)
     let totalWeek: TimeInterval = 7 * 24 * 3600
     return min(max(elapsed / totalWeek, 0), 1)
+}
+
+/// Most recent weekly reset point before `before`.
+func weeklyResetPoint(resetDay: Int, resetHour: Int, before now: Date = Date()) -> Date {
+    var utcCal = Calendar(identifier: .gregorian)
+    utcCal.timeZone = TimeZone(identifier: "UTC")!
+    let weekday = utcCal.component(.weekday, from: now)
+    let daysSinceReset = (weekday - resetDay + 7) % 7
+    let startOfUTCDay = utcCal.startOfDay(for: now)
+    var resetPoint = utcCal.date(byAdding: .day, value: -daysSinceReset, to: startOfUTCDay)!
+    resetPoint = utcCal.date(bySettingHour: resetHour, minute: 0, second: 0, of: resetPoint)!
+    if resetPoint > now { resetPoint = utcCal.date(byAdding: .day, value: -7, to: resetPoint)! }
+    return resetPoint
 }
 
 func paceLabel(usage: Double, time: Double) -> String {
