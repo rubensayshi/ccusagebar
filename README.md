@@ -2,6 +2,8 @@
 
 macOS menu bar app that tracks Claude Code API usage and spend in real time.
 
+![Screenshot](Resources/screenshot.png)
+
 ## Features
 
 - **Dual-ring gauge** in the menu bar — outer ring = current 5h block, inner ring = weekly spend
@@ -21,12 +23,7 @@ macOS menu bar app that tracks Claude Code API usage and spend in real time.
 ## Build & Run
 
 ```bash
-# Dev
-swift build && swift run
-
-# Release .app bundle
-./Scripts/bundle.sh
-open build/CCUsageBar.app
+pkill CCUsageBar; ./Scripts/bundle.sh && codesign -s - --force ./build/CCUsageBar.app && open ./build/CCUsageBar.app
 ```
 
 Requires macOS 14+, Swift 5.9+.
