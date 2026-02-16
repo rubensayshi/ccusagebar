@@ -5,7 +5,6 @@ struct SettingsView: View {
     @AppStorage("blockLimit") private var blockLimit: Double = 43.50
     @AppStorage("weeklyLimit") private var weeklyLimit: Double = 717
     @AppStorage("refreshInterval") private var refreshInterval: Int = 5
-    @AppStorage("npxPath") private var npxPath = "npx"
     @AppStorage("launchAtLogin") private var launchAtLogin = false
     @AppStorage("notifyAt50") private var notifyAt50 = true
     @AppStorage("notifyAt75") private var notifyAt75 = true
@@ -45,14 +44,6 @@ struct SettingsView: View {
             }
 
             Section("Advanced") {
-                HStack {
-                    Text("npx path")
-                    Spacer()
-                    TextField("npx", text: $npxPath)
-                        .frame(width: 200)
-                        .textFieldStyle(.roundedBorder)
-                }
-
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, newValue in
                         setLaunchAtLogin(newValue)

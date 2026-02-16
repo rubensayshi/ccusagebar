@@ -1,5 +1,17 @@
 import Foundation
 
+// MARK: - Raw usage entry from JSONL
+
+struct UsageEntry {
+    let timestamp: Date
+    let model: String
+    let inputTokens: Int
+    let outputTokens: Int
+    let cacheCreationTokens: Int
+    let cacheReadTokens: Int
+    let requestId: String
+}
+
 // MARK: - Blocks response
 
 struct BlocksResponse: Codable {
