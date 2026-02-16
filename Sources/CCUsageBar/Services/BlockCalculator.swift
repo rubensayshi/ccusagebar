@@ -3,7 +3,6 @@ import Foundation
 enum BlockCalculator {
 
     private static let blockDuration: TimeInterval = 5 * 3600  // 5 hours
-    private static let gapThreshold: TimeInterval = 5 * 3600   // 5h gap → new block
 
     struct BlockResult {
         let block: Block
@@ -33,34 +32,34 @@ enum BlockCalculator {
     }
 
     private static func findActiveBlock(entries: [UsageEntry], now: Date) -> Block {
-        // Walk entries in order, grouping by 5h gaps
+        // Sequential blocks: each starts on first activity (floored to UTC hour),
+        // lasts blockDuration. Next block starts on first activity after previous expires.
+        var blockStart: Date?
+        var blockEnd: Date?
         var blockEntries: [UsageEntry] = []
-        var lastTimestamp: Date?
 
         for entry in entries {
-            if let last = lastTimestamp, entry.timestamp.timeIntervalSince(last) > gapThreshold {
-                // Gap detected — start new block
-                blockEntries = []
+            if let end = blockEnd, entry.timestamp >= end {
+                // Previous block expired — new block on this activity
+                blockStart = floorToHour(entry.timestamp)
+                blockEnd = blockStart!.addingTimeInterval(blockDuration)
+                blockEntries = [entry]
+            } else if blockStart == nil {
+                // First ever entry — start first block
+                blockStart = floorToHour(entry.timestamp)
+                blockEnd = blockStart!.addingTimeInterval(blockDuration)
+                blockEntries = [entry]
+            } else {
+                blockEntries.append(entry)
             }
-            blockEntries.append(entry)
-            lastTimestamp = entry.timestamp
         }
 
-        // Check if the latest block is still active
-        guard let first = blockEntries.first,
-              let last = blockEntries.last else {
+        guard let start = blockStart, let end = blockEnd else {
             return noActiveBlock()
         }
 
-        // Block start: floor to UTC hour
-        let blockStart = floorToHour(first.timestamp)
-        let blockEnd = blockStart.addingTimeInterval(blockDuration)
-
-        // Active if: last entry within 5h AND now before block end
-        let timeSinceLast = now.timeIntervalSince(last.timestamp)
-        let isActive = timeSinceLast < gapThreshold && now < blockEnd
-
-        guard isActive else { return noActiveBlock() }
+        // Active if now is within the current block window
+        guard now >= start && now < end else { return noActiveBlock() }
 
         let totalTokens = blockEntries.reduce(0) { sum, e in
             sum + e.inputTokens + e.outputTokens + e.cacheCreationTokens + e.cacheReadTokens
@@ -68,14 +67,14 @@ enum BlockCalculator {
         let totalCost = blockEntries.reduce(0.0) { $0 + CostCalculator.cost(for: $1) }
         let models = Array(Set(blockEntries.map(\.model)))
 
-        let elapsedSeconds = now.timeIntervalSince(blockStart)
+        let elapsedSeconds = now.timeIntervalSince(start)
         let elapsedMinutes = max(elapsedSeconds / 60, 1)
         let elapsedHours = max(elapsedSeconds / 3600, 1.0 / 60)
 
         let tokensPerMinute = Double(totalTokens) / elapsedMinutes
         let costPerHour = totalCost / elapsedHours
 
-        let remainingSeconds = blockEnd.timeIntervalSince(now)
+        let remainingSeconds = end.timeIntervalSince(now)
         let remainingMinutes = max(Int(remainingSeconds / 60), 0)
 
         // Project to full 5h window
@@ -87,9 +86,9 @@ enum BlockCalculator {
         isoFormatter.formatOptions = [.withInternetDateTime]
 
         return Block(
-            id: isoFormatter.string(from: blockStart),
-            startTime: isoFormatter.string(from: blockStart),
-            endTime: isoFormatter.string(from: blockEnd),
+            id: isoFormatter.string(from: start),
+            startTime: isoFormatter.string(from: start),
+            endTime: isoFormatter.string(from: end),
             isActive: true,
             isGap: false,
             totalTokens: totalTokens,
