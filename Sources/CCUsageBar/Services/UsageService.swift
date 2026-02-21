@@ -59,6 +59,43 @@ class UsageService: ObservableObject {
         data.weeklyCost = result.weeklyCost
         data.lastUpdated = Date()
 
+        writeStatusFile(block: data.activeBlock, dailyCost: result.dailyCost, weeklyCost: result.weeklyCost)
+
         data.isLoading = false
+    }
+
+    private func writeStatusFile(block: Block?, dailyCost: Double, weeklyCost: Double) {
+        var dict: [String: Any] = [
+            "daily": ["cost": dailyCost],
+            "weekly": ["cost": weeklyCost, "limit": CostCalculator.defaultWeeklyLimit,
+                       "pct": round(weeklyCost / CostCalculator.defaultWeeklyLimit * 1000) / 10],
+            "updated": ISO8601DateFormatter().string(from: Date()),
+        ]
+
+        if let b = block {
+            let pct = round(b.costUSD / blockLimit * 1000) / 10
+            var blockDict: [String: Any] = [
+                "cost": round(b.costUSD * 100) / 100,
+                "limit": blockLimit,
+                "pct": pct,
+                "active": true,
+            ]
+            if let proj = b.projection {
+                blockDict["remaining_min"] = proj.remainingMinutes
+            }
+            if let burn = b.burnRate {
+                blockDict["burn_rate"] = round(burn.costPerHour * 100) / 100
+            }
+            dict["block"] = blockDict
+        } else {
+            dict["block"] = ["active": false]
+        }
+
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: [.sortedKeys])
+        else { return }
+
+        let target = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".claude/usage-status.json")
+        try? jsonData.write(to: target, options: .atomic)
     }
 }
