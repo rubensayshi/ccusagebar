@@ -2,35 +2,25 @@ import SwiftUI
 import AppKit
 
 struct MenuBarIcon: View {
-    let blockCost: Double
-    let blockLimit: Double
-    let blockRemainingMinutes: Int?
-    let weeklyCost: Double
-    let weeklyLimit: Double
-    let weeklyResetDay: Int
-    let weeklyResetHour: Int
-
-    private let blockTotalMinutes: Double = 300 // 5h window
+    let fiveHourUtilization: Double   // 0–100
+    let sevenDayUtilization: Double   // 0–100
+    let fiveHourResetsAt: String?
+    let sevenDayResetsAt: String?
 
     private var blockFraction: Double {
-        guard blockLimit > 0 else { return 0 }
-        return min(blockCost / blockLimit, 1.0)
+        min(fiveHourUtilization / 100.0, 1.0)
     }
 
     private var weeklyFraction: Double {
-        guard weeklyLimit > 0 else { return 0 }
-        return min(weeklyCost / weeklyLimit, 1.0)
+        min(sevenDayUtilization / 100.0, 1.0)
     }
 
-    /// How far through the 5h block window (0..1)
     private var blockTimeFraction: Double {
-        guard let remaining = blockRemainingMinutes else { return 0 }
-        let elapsed = blockTotalMinutes - Double(remaining)
-        return min(max(elapsed / blockTotalMinutes, 0), 1)
+        timeFraction(resetsAt: fiveHourResetsAt, windowSeconds: WindowDuration.fiveHour)
     }
 
     private var weeklyTimeFraction: Double {
-        CCUsageBar.weeklyTimeFraction(resetDay: weeklyResetDay, resetHour: weeklyResetHour)
+        timeFraction(resetsAt: sevenDayResetsAt, windowSeconds: WindowDuration.sevenDay)
     }
 
     var body: some View {
@@ -55,7 +45,7 @@ struct MenuBarIcon: View {
             let endAngle: CGFloat = -30 * .pi / 180
             let totalSweep = startAngle - endAngle
 
-            // Outer track (block background)
+            // Outer track (5h background)
             ctx.setLineCap(.round)
             ctx.setStrokeColor(NSColor.secondaryLabelColor.cgColor)
             ctx.setLineWidth(outerWidth)
@@ -63,10 +53,10 @@ struct MenuBarIcon: View {
                        startAngle: startAngle, endAngle: endAngle, clockwise: true)
             ctx.strokePath()
 
-            // Outer fill (block)
+            // Outer fill (5h)
             if blockFraction > 0 {
                 let fillEnd = startAngle - totalSweep * blockFraction
-                let color = paceColor(usage: blockFraction, time: blockTimeFraction)
+                let color = paceNSColor(usage: blockFraction, time: blockTimeFraction)
                 ctx.setStrokeColor(color.cgColor)
                 ctx.setLineWidth(outerWidth)
                 ctx.addArc(center: center, radius: outerRadius,
@@ -84,7 +74,7 @@ struct MenuBarIcon: View {
             // Inner fill (weekly)
             if weeklyFraction > 0 {
                 let fillEnd = startAngle - totalSweep * weeklyFraction
-                let color = paceColor(usage: weeklyFraction, time: weeklyTimeFraction)
+                let color = paceNSColor(usage: weeklyFraction, time: weeklyTimeFraction)
                 ctx.setStrokeColor(color.cgColor)
                 ctx.setLineWidth(innerWidth)
                 ctx.addArc(center: center, radius: innerRadius,
@@ -98,19 +88,16 @@ struct MenuBarIcon: View {
         return image
     }
 
-    /// Color based on usage pace vs time elapsed.
-    /// ratio = usageFraction / timeFraction — how far ahead of linear budget.
-    private func paceColor(usage: Double, time: Double) -> NSColor {
+    private func paceNSColor(usage: Double, time: Double) -> NSColor {
         guard time > 0.01 else {
-            // Very start of window — any usage is technically "ahead"
             return usage > 0 ? .systemYellow : .systemGreen
         }
         let ratio = usage / time
         switch ratio {
-        case ..<0.8: return .systemGreen   // well under budget pace
-        case ..<1.0: return .systemYellow  // approaching budget pace
-        case ..<1.3: return .systemOrange  // moderately ahead
-        default:     return .systemRed     // significantly ahead
+        case ..<0.8: return .systemGreen
+        case ..<1.0: return .systemYellow
+        case ..<1.3: return .systemOrange
+        default:     return .systemRed
         }
     }
 }

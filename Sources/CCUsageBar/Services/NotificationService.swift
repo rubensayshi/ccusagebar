@@ -19,9 +19,8 @@ class NotificationService {
         }
     }
 
-    func checkThresholds(blockCost: Double, blockLimit: Double) {
-        guard available, blockLimit > 0 else { return }
-        let pct = blockCost / blockLimit
+    func checkThresholds(utilization: Double) {
+        guard available else { return }
 
         let defaults = UserDefaults.standard
         let thresholds: [(Int, String)] = [
@@ -32,14 +31,15 @@ class NotificationService {
 
         for (level, key) in thresholds {
             let enabled = defaults.object(forKey: key) as? Bool ?? true
-            if enabled && pct >= Double(level) / 100.0 && !sentThresholds.contains(level) {
+            if enabled && utilization >= Double(level) && !sentThresholds.contains(level) {
                 sentThresholds.insert(level)
-                send(title: "CCUsageBar", body: "Block usage at \(level)%: \(Fmt.currency(blockCost)) / \(Fmt.currency(blockLimit))")
+                send(title: "CCUsageBar",
+                     body: "5-hour usage at \(level)% (\(String(format: "%.1f", utilization))%)")
             }
         }
     }
 
-    func resetForNewBlock() {
+    func resetThresholds() {
         sentThresholds.removeAll()
     }
 

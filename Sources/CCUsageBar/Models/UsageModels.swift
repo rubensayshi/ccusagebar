@@ -1,89 +1,39 @@
 import Foundation
 
-// MARK: - Raw usage entry from JSONL
+// MARK: - API response models
 
-struct UsageEntry {
-    let timestamp: Date
-    let model: String
-    let inputTokens: Int
-    let outputTokens: Int
-    let cacheCreationTokens: Int
-    let cacheReadTokens: Int
-    let requestId: String
+struct RateLimitResponse: Codable {
+    let fiveHour: WindowUtilization?
+    let sevenDay: WindowUtilization?
+    let sevenDaySonnet: WindowUtilization?
+    let sevenDayOpus: WindowUtilization?
+    let extraUsage: ExtraUsage?
 }
 
-// MARK: - Blocks response
-
-struct BlocksResponse: Codable {
-    let blocks: [Block]
+struct WindowUtilization: Codable {
+    let utilization: Double   // 0–100
+    let resetsAt: String?     // ISO 8601
 }
 
-struct Block: Codable {
-    let id: String
-    let startTime: String
-    let endTime: String
-    let isActive: Bool
-    let isGap: Bool
-    let totalTokens: Int
-    let costUSD: Double
-    let models: [String]
-    let burnRate: BurnRate?
-    let projection: Projection?
+struct ExtraUsage: Codable {
+    let isEnabled: Bool
+    let monthlyLimit: Int?
+    let usedCredits: Double?
+    let utilization: Double?
 }
 
-struct BurnRate: Codable {
-    let tokensPerMinute: Double
-    let costPerHour: Double
-}
+// MARK: - Keychain credential metadata
 
-struct Projection: Codable {
-    let totalTokens: Int
-    let totalCost: Double
-    let remainingMinutes: Int
-}
-
-// MARK: - Daily response
-
-struct DailyResponse: Codable {
-    let daily: [DailyEntry]
-    let totals: DailyTotals
-}
-
-struct DailyEntry: Codable {
-    let date: String
-    let totalTokens: Int
-    let totalCost: Double
-}
-
-struct DailyTotals: Codable {
-    let totalCost: Double
-    let totalTokens: Int
-}
-
-// MARK: - Weekly response
-
-struct WeeklyResponse: Codable {
-    let weekly: [WeeklyEntry]
-    let totals: WeeklyTotals
-}
-
-struct WeeklyEntry: Codable {
-    let week: String
-    let totalTokens: Int
-    let totalCost: Double
-}
-
-struct WeeklyTotals: Codable {
-    let totalCost: Double
-    let totalTokens: Int
+struct CredentialMeta {
+    let rateLimitTier: String?
+    let subscriptionType: String?
 }
 
 // MARK: - App state
 
 struct UsageData {
-    var activeBlock: Block?
-    var dailyCost: Double = 0
-    var weeklyCost: Double = 0
+    var rateLimit: RateLimitResponse?
+    var credentialMeta: CredentialMeta?
     var lastUpdated: Date?
     var error: String?
     var isLoading: Bool = false

@@ -21,7 +21,6 @@ struct ProgressBarView: View {
 }
 
 /// Pace-based color: usage fraction vs time fraction.
-/// Shared logic — matches MenuBarIcon.paceColor thresholds.
 func paceColor(usage: Double, time: Double) -> Color {
     guard time > 0.01 else {
         return usage > 0 ? .yellow : .green
@@ -35,27 +34,6 @@ func paceColor(usage: Double, time: Double) -> Color {
     }
 }
 
-/// Fraction of the billing week elapsed, given a reset day (1=Sun..7=Sat) and hour (UTC).
-func weeklyTimeFraction(resetDay: Int = 4, resetHour: Int = 9, now: Date = Date()) -> Double {
-    let resetPoint = weeklyResetPoint(resetDay: resetDay, resetHour: resetHour, before: now)
-    let elapsed = now.timeIntervalSince(resetPoint)
-    let totalWeek: TimeInterval = 7 * 24 * 3600
-    return min(max(elapsed / totalWeek, 0), 1)
-}
-
-/// Most recent weekly reset point before `before`.
-func weeklyResetPoint(resetDay: Int, resetHour: Int, before now: Date = Date()) -> Date {
-    var utcCal = Calendar(identifier: .gregorian)
-    utcCal.timeZone = TimeZone(identifier: "UTC")!
-    let weekday = utcCal.component(.weekday, from: now)
-    let daysSinceReset = (weekday - resetDay + 7) % 7
-    let startOfUTCDay = utcCal.startOfDay(for: now)
-    var resetPoint = utcCal.date(byAdding: .day, value: -daysSinceReset, to: startOfUTCDay)!
-    resetPoint = utcCal.date(bySettingHour: resetHour, minute: 0, second: 0, of: resetPoint)!
-    if resetPoint > now { resetPoint = utcCal.date(byAdding: .day, value: -7, to: resetPoint)! }
-    return resetPoint
-}
-
 func paceLabel(usage: Double, time: Double) -> String {
     guard time > 0.01 else {
         return usage > 0 ? "Early usage" : "No usage yet"
@@ -67,4 +45,27 @@ func paceLabel(usage: Double, time: Double) -> String {
     case ..<1.3: return "Over budget pace"
     default:     return "Well over pace"
     }
+}
+
+/// Time fraction elapsed in a window, given its reset time and total duration.
+func timeFraction(resetsAt: String?, windowSeconds: TimeInterval) -> Double {
+    guard let resetsAt, let resetDate = parseISO8601(resetsAt) else { return 0 }
+    let remaining = resetDate.timeIntervalSinceNow
+    let elapsed = windowSeconds - remaining
+    return min(max(elapsed / windowSeconds, 0), 1)
+}
+
+/// Parse ISO 8601 date string (with fractional seconds).
+private func parseISO8601(_ string: String) -> Date? {
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+    if let date = formatter.date(from: string) { return date }
+    formatter.formatOptions = [.withInternetDateTime]
+    return formatter.date(from: string)
+}
+
+/// Window durations in seconds.
+enum WindowDuration {
+    static let fiveHour: TimeInterval = 5 * 3600
+    static let sevenDay: TimeInterval = 7 * 24 * 3600
 }

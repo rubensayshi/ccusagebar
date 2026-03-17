@@ -1,50 +1,57 @@
 import SwiftUI
 
 struct WeeklyUsageView: View {
-    let cost: Double
-    let limit: Double
-
-    @AppStorage("weeklyResetDay") private var resetDay: Int = 4
-    @AppStorage("weeklyResetHour") private var resetHour: Int = 9
-
-    private var fraction: Double { cost / limit }
-
-    private var timeFraction: Double {
-        weeklyTimeFraction(resetDay: resetDay, resetHour: resetHour)
-    }
+    let overall: WindowUtilization?
+    let sonnet: WindowUtilization?
+    let opus: WindowUtilization?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("This Week")
-                .font(.headline)
-
-            HStack {
-                Text("\(Fmt.currency(cost)) / \(Fmt.currency(limit))")
-                    .font(.system(.body, design: .monospaced))
-                Spacer()
-                Text(Fmt.percentage(fraction))
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(paceColor(usage: fraction, time: timeFraction))
+            if let overall {
+                windowSection(label: "This Week", window: overall,
+                              windowSeconds: WindowDuration.sevenDay)
             }
 
-            ProgressBarView(fraction: fraction, timeFraction: timeFraction)
+            if let sonnet {
+                Divider().padding(.vertical, 2)
+                windowSection(label: "Sonnet (7-day)", window: sonnet,
+                              windowSeconds: WindowDuration.sevenDay)
+            }
+
+            if let opus {
+                Divider().padding(.vertical, 2)
+                windowSection(label: "Opus (7-day)", window: opus,
+                              windowSeconds: WindowDuration.sevenDay)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func windowSection(label: String, window: WindowUtilization,
+                               windowSeconds: TimeInterval) -> some View {
+        let fraction = window.utilization / 100.0
+        let timeFrac = timeFraction(resetsAt: window.resetsAt, windowSeconds: windowSeconds)
+
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(label)
+                    .font(.headline)
+                Spacer()
+                Text(Fmt.countdown(until: window.resetsAt))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
 
             HStack {
-                Text(paceLabel(usage: fraction, time: timeFraction))
+                Text(Fmt.utilization(window.utilization))
+                    .font(.system(.body, design: .monospaced))
+                Spacer()
+                Text(paceLabel(usage: fraction, time: timeFrac))
                     .font(.caption)
-                    .foregroundStyle(paceColor(usage: fraction, time: timeFraction))
-                Spacer()
-                if timeFraction > 0.01 {
-                    let hoursElapsed = timeFraction * 7 * 24
-                    Text("Burn: \(Fmt.burnRate(cost / hoursElapsed))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Text("Proj: \(Fmt.currency(cost / timeFraction))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                    .foregroundStyle(paceColor(usage: fraction, time: timeFrac))
             }
+
+            ProgressBarView(fraction: fraction, timeFraction: timeFrac)
         }
     }
 }

@@ -4,23 +4,16 @@ import SwiftUI
 struct CCUsageBarApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var service = UsageService()
-    @AppStorage("blockLimit") private var blockLimit: Double = CostCalculator.defaultBlockLimit
-    @AppStorage("weeklyLimit") private var weeklyLimit: Double = CostCalculator.defaultWeeklyLimit
-    @AppStorage("weeklyResetDay") private var weeklyResetDay: Int = 4
-    @AppStorage("weeklyResetHour") private var weeklyResetHour: Int = 9
 
     var body: some Scene {
         MenuBarExtra {
             UsagePopoverView(service: service)
         } label: {
             MenuBarIcon(
-                blockCost: service.data.activeBlock?.costUSD ?? 0,
-                blockLimit: blockLimit,
-                blockRemainingMinutes: service.data.activeBlock?.projection?.remainingMinutes,
-                weeklyCost: service.data.weeklyCost,
-                weeklyLimit: weeklyLimit,
-                weeklyResetDay: weeklyResetDay,
-                weeklyResetHour: weeklyResetHour
+                fiveHourUtilization: service.data.rateLimit?.fiveHour?.utilization ?? 0,
+                sevenDayUtilization: service.data.rateLimit?.sevenDay?.utilization ?? 0,
+                fiveHourResetsAt: service.data.rateLimit?.fiveHour?.resetsAt,
+                sevenDayResetsAt: service.data.rateLimit?.sevenDay?.resetsAt
             )
         }
         .menuBarExtraStyle(.window)

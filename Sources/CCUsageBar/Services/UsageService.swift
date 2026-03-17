@@ -6,13 +6,9 @@ import Combine
 class UsageService: ObservableObject {
     @Published var data = UsageData()
 
-    @AppStorage("blockLimit") private var blockLimit: Double = CostCalculator.defaultBlockLimit
     @AppStorage("refreshInterval") private var refreshIntervalMinutes: Int = 5
-    @AppStorage("weeklyResetDay") private var weeklyResetDay: Int = 4   // Wed
-    @AppStorage("weeklyResetHour") private var weeklyResetHour: Int = 9 // 09:00 UTC
 
     private var timer: Timer?
-    private var lastBlockId: String?
 
     init() {
         startAutoRefresh()
@@ -38,57 +34,62 @@ class UsageService: ObservableObject {
         data.isLoading = true
         data.error = nil
 
-        let entries = await Task.detached(priority: .userInitiated) {
-            JSONLReader.scan()
-        }.value
+        let service = RateLimitService.shared
+        let response = await service.fetchUsage()
+        let meta = await service.readCredentialMeta()
 
-        let result = BlockCalculator.compute(entries: entries, resetDay: weeklyResetDay, resetHour: weeklyResetHour)
+        if let response {
+            data.rateLimit = response
 
-        if result.block.isActive && !result.block.isGap {
-            if result.block.id != lastBlockId {
-                lastBlockId = result.block.id
-                NotificationService.shared.resetForNewBlock()
+            // Notifications on 5h utilization
+            if let fiveHour = response.fiveHour {
+                NotificationService.shared.checkThresholds(utilization: fiveHour.utilization)
             }
-            data.activeBlock = result.block
-            NotificationService.shared.checkThresholds(blockCost: result.block.costUSD, blockLimit: blockLimit)
+        } else if meta == nil {
+            data.error = "No credentials found in Keychain"
         } else {
-            data.activeBlock = nil
+            data.error = "Failed to fetch usage from API"
         }
 
-        data.dailyCost = result.dailyCost
-        data.weeklyCost = result.weeklyCost
+        data.credentialMeta = meta
         data.lastUpdated = Date()
 
-        writeStatusFile(block: data.activeBlock, dailyCost: result.dailyCost, weeklyCost: result.weeklyCost)
+        writeStatusFile()
 
         data.isLoading = false
     }
 
-    private func writeStatusFile(block: Block?, dailyCost: Double, weeklyCost: Double) {
+    private func writeStatusFile() {
         var dict: [String: Any] = [
-            "daily": ["cost": dailyCost],
-            "weekly": ["cost": weeklyCost, "limit": CostCalculator.defaultWeeklyLimit,
-                       "pct": round(weeklyCost / CostCalculator.defaultWeeklyLimit * 1000) / 10],
             "updated": ISO8601DateFormatter().string(from: Date()),
         ]
 
-        if let b = block {
-            let pct = round(b.costUSD / blockLimit * 1000) / 10
-            var blockDict: [String: Any] = [
-                "cost": round(b.costUSD * 100) / 100,
-                "limit": blockLimit,
-                "pct": pct,
-                "active": true,
+        if let rl = data.rateLimit {
+            if let fh = rl.fiveHour {
+                dict["five_hour"] = [
+                    "utilization": fh.utilization,
+                    "resets_at": fh.resetsAt ?? "",
+                ]
+            }
+            if let sd = rl.sevenDay {
+                dict["seven_day"] = [
+                    "utilization": sd.utilization,
+                    "resets_at": sd.resetsAt ?? "",
+                ]
+            }
+            if let ss = rl.sevenDaySonnet {
+                dict["seven_day_sonnet"] = [
+                    "utilization": ss.utilization,
+                    "resets_at": ss.resetsAt ?? "",
+                ]
+            }
+        }
+
+        if let meta = data.credentialMeta {
+            dict["plan"] = [
+                "tier": meta.rateLimitTier ?? "",
+                "subscription": meta.subscriptionType ?? "",
             ]
-            if let proj = b.projection {
-                blockDict["remaining_min"] = proj.remainingMinutes
-            }
-            if let burn = b.burnRate {
-                blockDict["burn_rate"] = round(burn.costPerHour * 100) / 100
-            }
-            dict["block"] = blockDict
-        } else {
-            dict["block"] = ["active": false]
         }
 
         guard let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: [.sortedKeys])

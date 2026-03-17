@@ -1,20 +1,17 @@
 import Foundation
 
 enum Fmt {
-    static func currency(_ value: Double) -> String {
-        String(format: "$%.2f", value)
+    static func utilization(_ value: Double) -> String {
+        String(format: "%.1f%%", value)
     }
 
-    static func percentage(_ value: Double) -> String {
-        String(format: "%.1f%%", value * 100)
-    }
-
-    static func timeRemaining(minutes: Int) -> String {
-        let h = minutes / 60
-        let m = minutes % 60
-        if h > 0 {
-            return "\(h)h \(m)m left"
-        }
+    static func countdown(until resetsAt: String?) -> String {
+        guard let resetsAt, let date = parseISO8601(resetsAt) else { return "" }
+        let remaining = date.timeIntervalSinceNow
+        guard remaining > 0 else { return "Resetting…" }
+        let h = Int(remaining) / 3600
+        let m = (Int(remaining) % 3600) / 60
+        if h > 0 { return "\(h)h \(m)m left" }
         return "\(m)m left"
     }
 
@@ -24,7 +21,11 @@ enum Fmt {
         return f.string(from: date)
     }
 
-    static func burnRate(_ costPerHour: Double) -> String {
-        String(format: "$%.2f/hr", costPerHour)
+    private static func parseISO8601(_ string: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: string) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: string)
     }
 }

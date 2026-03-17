@@ -2,9 +2,6 @@ import SwiftUI
 
 struct UsagePopoverView: View {
     @ObservedObject var service: UsageService
-    @AppStorage("blockLimit") private var blockLimit: Double = CostCalculator.defaultBlockLimit
-    @AppStorage("weeklyLimit") private var weeklyLimit: Double = CostCalculator.defaultWeeklyLimit
-
 
     var body: some View {
         VStack(spacing: 0) {
@@ -25,11 +22,11 @@ struct UsagePopoverView: View {
     @ViewBuilder
     private var content: some View {
         VStack(spacing: 12) {
-            if let block = service.data.activeBlock {
-                BlockUsageView(block: block, limit: blockLimit)
+            if let fiveHour = service.data.rateLimit?.fiveHour {
+                BlockUsageView(window: fiveHour)
             } else {
                 HStack {
-                    Text("No Active Block")
+                    Text("No 5-Hour Data")
                         .font(.headline)
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -38,11 +35,11 @@ struct UsagePopoverView: View {
 
             Divider()
 
-            WeeklyUsageView(cost: service.data.weeklyCost, limit: weeklyLimit)
-
-            Divider()
-
-            DailyUsageView(cost: service.data.dailyCost)
+            WeeklyUsageView(
+                overall: service.data.rateLimit?.sevenDay,
+                sonnet: service.data.rateLimit?.sevenDaySonnet,
+                opus: service.data.rateLimit?.sevenDayOpus
+            )
 
             Divider()
 
@@ -78,6 +75,12 @@ struct UsagePopoverView: View {
             }
 
             Spacer()
+
+            if let meta = service.data.credentialMeta, let tier = meta.subscriptionType {
+                Text(tier.capitalized)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
 
             if let date = service.data.lastUpdated {
                 Text("Last: \(Fmt.shortTime(date))")
