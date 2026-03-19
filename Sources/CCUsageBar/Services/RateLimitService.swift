@@ -1,5 +1,4 @@
 import Foundation
-import Security
 
 actor RateLimitService {
     static let shared = RateLimitService()
@@ -76,20 +75,27 @@ actor RateLimitService {
             return nil
         }
 
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: "Claude Code-credentials",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        proc.arguments = ["find-generic-password", "-s", "Claude Code-credentials", "-w"]
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        proc.standardError = FileHandle.nullDevice
 
-        var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-        guard status == errSecSuccess, let data = result as? Data else {
+        do {
+            try proc.run()
+            proc.waitUntilExit()
+        } catch {
             lastKeychainFailure = Date()
             return nil
         }
+
+        guard proc.terminationStatus == 0 else {
+            lastKeychainFailure = Date()
+            return nil
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
 
         lastKeychainFailure = nil
         return try? JSONDecoder().decode(KeychainBlob.self, from: data)
