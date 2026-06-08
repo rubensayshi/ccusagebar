@@ -2,26 +2,19 @@ import SwiftUI
 
 struct WeeklyUsageView: View {
     let overall: WindowUtilization?
-    let sonnet: WindowUtilization?
-    let opus: WindowUtilization?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let overall {
                 windowSection(label: "This Week", window: overall,
                               windowSeconds: WindowDuration.sevenDay)
-            }
-
-            if let sonnet {
-                Divider().padding(.vertical, 2)
-                windowSection(label: "Sonnet (7-day)", window: sonnet,
-                              windowSeconds: WindowDuration.sevenDay)
-            }
-
-            if let opus {
-                Divider().padding(.vertical, 2)
-                windowSection(label: "Opus (7-day)", window: opus,
-                              windowSeconds: WindowDuration.sevenDay)
+            } else {
+                HStack {
+                    Text("No Weekly Data")
+                        .font(.headline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
             }
         }
     }

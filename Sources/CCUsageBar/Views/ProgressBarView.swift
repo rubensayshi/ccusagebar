@@ -47,21 +47,12 @@ func paceLabel(usage: Double, time: Double) -> String {
     }
 }
 
-/// Time fraction elapsed in a window, given its reset time and total duration.
-func timeFraction(resetsAt: String?, windowSeconds: TimeInterval) -> Double {
-    guard let resetsAt, let resetDate = parseISO8601(resetsAt) else { return 0 }
-    let remaining = resetDate.timeIntervalSinceNow
+/// Time fraction elapsed in a window, given its reset epoch and total duration.
+func timeFraction(resetsAt: Double?, windowSeconds: TimeInterval) -> Double {
+    guard let resetsAt else { return 0 }
+    let remaining = Date(timeIntervalSince1970: resetsAt).timeIntervalSinceNow
     let elapsed = windowSeconds - remaining
     return min(max(elapsed / windowSeconds, 0), 1)
-}
-
-/// Parse ISO 8601 date string (with fractional seconds).
-private func parseISO8601(_ string: String) -> Date? {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let date = formatter.date(from: string) { return date }
-    formatter.formatOptions = [.withInternetDateTime]
-    return formatter.date(from: string)
 }
 
 /// Window durations in seconds.

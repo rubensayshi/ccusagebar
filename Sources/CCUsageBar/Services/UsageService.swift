@@ -9,13 +9,15 @@ class UsageService: ObservableObject {
     @AppStorage("refreshInterval") private var refreshIntervalMinutes: Int = 5
 
     private var timer: Timer?
+    private var fileWatcher: FileWatcher?
 
     init() {
         startAutoRefresh()
+        startWatching()
     }
 
     func startAutoRefresh() {
-        Task { await refresh() }
+        refresh()
         scheduleTimer()
     }
 
@@ -23,80 +25,63 @@ class UsageService: ObservableObject {
         timer?.invalidate()
         let interval = TimeInterval(refreshIntervalMinutes * 60)
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            Task { @MainActor in
-                await self.refresh()
-            }
+            Task { @MainActor in self?.refresh() }
         }
     }
 
-    func refresh() async {
-        data.isLoading = true
-        data.error = nil
-
-        let service = RateLimitService.shared
-        let response = await service.fetchUsage()
-        let meta = await service.readCredentialMeta()
-
-        if let response {
-            data.rateLimit = response
-
-            // Notifications on 5h utilization
-            if let fiveHour = response.fiveHour {
-                NotificationService.shared.checkThresholds(utilization: fiveHour.utilization)
-            }
-        } else if meta == nil {
-            data.error = "No credentials found in Keychain"
-        } else {
-            data.error = "Failed to fetch usage from API"
+    private func startWatching() {
+        fileWatcher = FileWatcher(url: UsageStatusReader.fileURL) { [weak self] in
+            Task { @MainActor in self?.refresh() }
         }
+    }
 
-        data.credentialMeta = meta
-        data.lastUpdated = Date()
+    func refresh() {
+        data.isLoading = true
 
-        writeStatusFile()
+        let result = UsageStatusReader.read()
+        data.rateLimit = result.rateLimit
+        data.error = result.error
+        data.lastUpdated = result.updated ?? Date()
+
+        if let fiveHour = result.rateLimit?.fiveHour {
+            NotificationService.shared.checkThresholds(utilization: fiveHour.utilization)
+        }
 
         data.isLoading = false
     }
+}
 
-    private func writeStatusFile() {
-        var dict: [String: Any] = [
-            "updated": ISO8601DateFormatter().string(from: Date()),
-        ]
+/// Watches a single file for changes via a kqueue dispatch source. The file is
+/// rewritten atomically (write-tmp + rename), so we watch the parent directory
+/// and re-arm to survive the inode swap.
+final class FileWatcher {
+    private let url: URL
+    private let onChange: () -> Void
+    private var source: DispatchSourceFileSystemObject?
+    private var fd: Int32 = -1
 
-        if let rl = data.rateLimit {
-            if let fh = rl.fiveHour {
-                dict["five_hour"] = [
-                    "utilization": fh.utilization,
-                    "resets_at": fh.resetsAt ?? "",
-                ]
-            }
-            if let sd = rl.sevenDay {
-                dict["seven_day"] = [
-                    "utilization": sd.utilization,
-                    "resets_at": sd.resetsAt ?? "",
-                ]
-            }
-            if let ss = rl.sevenDaySonnet {
-                dict["seven_day_sonnet"] = [
-                    "utilization": ss.utilization,
-                    "resets_at": ss.resetsAt ?? "",
-                ]
-            }
+    init(url: URL, onChange: @escaping () -> Void) {
+        self.url = url
+        self.onChange = onChange
+        start()
+    }
+
+    private func start() {
+        let dir = url.deletingLastPathComponent()
+        fd = open(dir.path, O_EVTONLY)
+        guard fd >= 0 else { return }
+
+        let src = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd, eventMask: .write, queue: .global())
+        src.setEventHandler { [weak self] in self?.onChange() }
+        src.setCancelHandler { [weak self] in
+            if let fd = self?.fd, fd >= 0 { close(fd) }
         }
+        source = src
+        src.resume()
+    }
 
-        if let meta = data.credentialMeta {
-            dict["plan"] = [
-                "tier": meta.rateLimitTier ?? "",
-                "subscription": meta.subscriptionType ?? "",
-            ]
-        }
-
-        guard let jsonData = try? JSONSerialization.data(withJSONObject: dict, options: [.sortedKeys])
-        else { return }
-
-        let target = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".claude/usage-status.json")
-        try? jsonData.write(to: target, options: .atomic)
+    deinit {
+        source?.cancel()
     }
 }

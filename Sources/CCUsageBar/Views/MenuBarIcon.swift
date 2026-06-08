@@ -4,8 +4,8 @@ import AppKit
 struct MenuBarIcon: View {
     let fiveHourUtilization: Double   // 0–100
     let sevenDayUtilization: Double   // 0–100
-    let fiveHourResetsAt: String?
-    let sevenDayResetsAt: String?
+    let fiveHourResetsAt: Double?
+    let sevenDayResetsAt: Double?
 
     private var blockFraction: Double {
         min(fiveHourUtilization / 100.0, 1.0)

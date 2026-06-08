@@ -35,11 +35,7 @@ struct UsagePopoverView: View {
 
             Divider()
 
-            WeeklyUsageView(
-                overall: service.data.rateLimit?.sevenDay,
-                sonnet: service.data.rateLimit?.sevenDaySonnet,
-                opus: service.data.rateLimit?.sevenDayOpus
-            )
+            WeeklyUsageView(overall: service.data.rateLimit?.sevenDay)
 
             Divider()
 
@@ -60,7 +56,7 @@ struct UsagePopoverView: View {
     private var footer: some View {
         HStack {
             Button {
-                Task { await service.refresh() }
+                service.refresh()
             } label: {
                 Label("Refresh", systemImage: "arrow.clockwise")
                     .font(.caption)
@@ -75,12 +71,6 @@ struct UsagePopoverView: View {
             }
 
             Spacer()
-
-            if let meta = service.data.credentialMeta, let tier = meta.subscriptionType {
-                Text(tier.capitalized)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
 
             if let date = service.data.lastUpdated {
                 Text("Last: \(Fmt.shortTime(date))")

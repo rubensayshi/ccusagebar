@@ -19,7 +19,7 @@ struct SettingsView: View {
                         Text("Welcome to CCUsageBar")
                             .font(.title2)
                             .fontWeight(.semibold)
-                        Text("Usage data is fetched from the Anthropic API via your Claude Code credentials.")
+                        Text("Usage data comes from Claude Code's status line. Source Scripts/statusline-usage.sh in your ~/.claude/statusline-command.sh — see the README.")
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
